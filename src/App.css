@@ -173,9 +173,8 @@
 }
 
 .recharts-line-curve {
-  stroke-dasharray: 1600;
-  stroke-dashoffset: 1600;
-  animation: draw-line 2.2s 0.35s ease forwards;
+  opacity: 0;
+  animation: line-fade-in 0.9s 0.35s ease forwards;
 }
 
 @keyframes rise-in {
@@ -190,9 +189,13 @@
   }
 }
 
-@keyframes draw-line {
+@keyframes line-fade-in {
+  from {
+    opacity: 0;
+  }
+
   to {
-    stroke-dashoffset: 0;
+    opacity: 1;
   }
 }
 
