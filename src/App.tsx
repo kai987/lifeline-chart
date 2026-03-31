@@ -1,20 +1,13 @@
-import { useEffect, useRef, useState } from 'react'
-import {
-  Area,
-  CartesianGrid,
-  ComposedChart,
-  Line,
-  ResponsiveContainer,
-  XAxis,
-  YAxis,
-} from 'recharts'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { Canvas, type ThreeEvent } from '@react-three/fiber'
+import { ContactShadows, Html, Line as DreiLine, OrbitControls, PerspectiveCamera } from '@react-three/drei'
+import * as THREE from 'three'
 import './App.css'
 
 const TOOLTIP_FADE_MS = 180
-const TOOLTIP_HIDE_DELAY_MS = 120
-const TOOLTIP_WIDTH = 220
-const TOOLTIP_HEIGHT = 88
-const TOOLTIP_GAP = 20
+const TOOLTIP_HIDE_DELAY_MS = 320
+
+type ViewportPreset = 'mobile' | 'tablet' | 'desktop'
 
 type LifelinePoint = {
   stage: string
@@ -22,6 +15,41 @@ type LifelinePoint = {
   note: string
   energy: number
   accent: string
+}
+
+type ScenePoint = LifelinePoint & {
+  connectorEnd: [number, number, number]
+  isTop: boolean
+  labelPosition: [number, number, number]
+  position: [number, number, number]
+  tooltipPosition: [number, number, number]
+}
+
+type HoveredTooltip = {
+  point: ScenePoint
+  visible: boolean
+}
+
+type LayoutConfig = {
+  cardDistanceFactor: number
+  cameraPosition: [number, number, number]
+  edgeShift: number
+  labelBottomOffset: number
+  labelBottomZOffset: number
+  labelTopOffset: number
+  labelTopZOffset: number
+  maxDistance: number
+  minDistance: number
+  orbitTarget: [number, number, number]
+  tooltipDirection: number
+  tooltipDistanceFactor: number
+  tooltipYOffset: number
+  tooltipZOffset: number
+  xSpacing: number
+  yScale: number
+  zBase: number
+  zDrift: number
+  zWave: number
 }
 
 const timelineData: LifelinePoint[] = [
@@ -104,128 +132,146 @@ const timelineData: LifelinePoint[] = [
   },
 ]
 
-type TimelineNodeProps = {
-  cx?: number
-  cy?: number
-  index?: number
-  payload?: LifelinePoint
-  onHover?: (tooltip: HoveredTooltip) => void
-  onLeave?: () => void
+const VIEWPORT_LAYOUTS: Record<ViewportPreset, LayoutConfig> = {
+  desktop: {
+    cardDistanceFactor: 11,
+    cameraPosition: [0, 2.1, 32.5],
+    edgeShift: 0.95,
+    labelBottomOffset: -6.8,
+    labelBottomZOffset: 0.38,
+    labelTopOffset: 6.6,
+    labelTopZOffset: -0.48,
+    maxDistance: 44,
+    minDistance: 24,
+    orbitTarget: [0, 0.7, -0.6],
+    tooltipDirection: 2.35,
+    tooltipDistanceFactor: 11,
+    tooltipYOffset: 2.25,
+    tooltipZOffset: 0.92,
+    xSpacing: 4.9,
+    yScale: 0.66,
+    zBase: -0.24,
+    zDrift: 0.06,
+    zWave: 0.72,
+  },
+  tablet: {
+    cardDistanceFactor: 12,
+    cameraPosition: [0, 1.9, 30.5],
+    edgeShift: 0.72,
+    labelBottomOffset: -5.8,
+    labelBottomZOffset: 0.28,
+    labelTopOffset: 5.6,
+    labelTopZOffset: -0.34,
+    maxDistance: 40,
+    minDistance: 22,
+    orbitTarget: [0, 0.55, -0.45],
+    tooltipDirection: 2,
+    tooltipDistanceFactor: 12,
+    tooltipYOffset: 2,
+    tooltipZOffset: 0.78,
+    xSpacing: 4.35,
+    yScale: 0.62,
+    zBase: -0.18,
+    zDrift: 0.05,
+    zWave: 0.58,
+  },
+  mobile: {
+    cardDistanceFactor: 13.5,
+    cameraPosition: [0, 1.55, 27.2],
+    edgeShift: 0.52,
+    labelBottomOffset: -4.9,
+    labelBottomZOffset: 0.18,
+    labelTopOffset: 4.8,
+    labelTopZOffset: -0.24,
+    maxDistance: 35,
+    minDistance: 18,
+    orbitTarget: [0, 0.4, -0.25],
+    tooltipDirection: 1.72,
+    tooltipDistanceFactor: 13.5,
+    tooltipYOffset: 1.72,
+    tooltipZOffset: 0.62,
+    xSpacing: 3.95,
+    yScale: 0.58,
+    zBase: -0.12,
+    zDrift: 0.04,
+    zWave: 0.42,
+  },
 }
 
-function TimelineNode({
-  cx,
-  cy,
-  index = 0,
-  payload,
-  onHover,
-  onLeave,
-}: TimelineNodeProps) {
-  if (cx == null || cy == null || !payload) {
-    return null
+function getViewportPreset(width: number): ViewportPreset {
+  if (width < 768) {
+    return 'mobile'
   }
 
-  const isTop = index % 2 === 0
-  const cardWidth = 156
-  const titleLineHeight = 18
-  const connectorLength = 48
-  const cardHeight = 78 + (payload.stageLines.length - 1) * titleLineHeight
-  const cardY = isTop ? cy - connectorLength - cardHeight : cy + connectorLength
-  const connectorEndY = isTop ? cardY + cardHeight : cardY
-  const noteY = cardY + 44 + (payload.stageLines.length - 1) * titleLineHeight
-  const noteWidth = Math.max(86, payload.note.length * 12 + 20)
+  if (width < 1180) {
+    return 'tablet'
+  }
 
-  return (
-    <g
-      onMouseEnter={() =>
-        onHover?.({
-          point: payload,
-          x: cx,
-          y: cy,
-          visible: true,
-        })
-      }
-      onMouseLeave={onLeave}
-      style={{ cursor: 'pointer' }}
-    >
-      <circle cx={cx} cy={cy} fill="transparent" r={34} />
-      <line
-        x1={cx}
-        y1={cy + (isTop ? -13 : 13)}
-        x2={cx}
-        y2={connectorEndY}
-        stroke={payload.accent}
-        strokeDasharray="5 6"
-        strokeOpacity={0.9}
-        strokeWidth={2}
-      />
-      <circle cx={cx} cy={cy} fill={payload.accent} fillOpacity={0.18} r={15} />
-      <circle
-        className="node-anchor"
-        cx={cx}
-        cy={cy}
-        fill={payload.accent}
-        r={8}
-      />
-      <circle cx={cx} cy={connectorEndY} fill={payload.accent} r={4} />
-      <rect
-        x={cx - cardWidth / 2}
-        y={cardY}
-        width={cardWidth}
-        height={cardHeight}
-        rx={24}
-        fill="rgba(255, 251, 245, 0.96)"
-        filter="url(#cardShadow)"
-        stroke={payload.accent}
-        strokeOpacity={0.2}
-      />
-      <text
-        className="node-title"
-        textAnchor="start"
-        x={cx - cardWidth / 2 + 18}
-        y={cardY + 28}
-      >
-        {payload.stageLines.map((line, lineIndex) => (
-          <tspan
-            key={`${payload.stage}-${lineIndex}`}
-            x={cx - cardWidth / 2 + 18}
-            dy={lineIndex === 0 ? 0 : titleLineHeight}
-          >
-            {line}
-          </tspan>
-        ))}
-      </text>
-      <rect
-        x={cx - noteWidth / 2}
-        y={noteY}
-        width={noteWidth}
-        height={28}
-        rx={14}
-        fill={`${payload.accent}22`}
-      />
-      <text className="node-note" textAnchor="middle" x={cx} y={noteY + 19}>
-        {payload.note}
-      </text>
-    </g>
+  return 'desktop'
+}
+
+function useViewportPreset() {
+  const [viewportPreset, setViewportPreset] = useState<ViewportPreset>(() =>
+    typeof window === 'undefined' ? 'desktop' : getViewportPreset(window.innerWidth),
   )
+
+  useEffect(() => {
+    const handleResize = () => {
+      setViewportPreset(getViewportPreset(window.innerWidth))
+    }
+
+    handleResize()
+    window.addEventListener('resize', handleResize)
+
+    return () => window.removeEventListener('resize', handleResize)
+  }, [])
+
+  return viewportPreset
+}
+
+function buildScenePoints(data: LifelinePoint[], layout: LayoutConfig): ScenePoint[] {
+  const center = (data.length - 1) / 2
+
+  return data.map((point, index) => {
+    const x = (index - center) * layout.xSpacing
+    const y = (point.energy - 6.5) * layout.yScale
+    const z = Math.sin(index * 0.72) * layout.zWave + (index - center) * layout.zDrift + layout.zBase
+    const isTop = index % 2 === 0
+    const edgeShift = index === 0 ? layout.edgeShift : index === data.length - 1 ? -layout.edgeShift : 0
+    const labelPosition: [number, number, number] = [
+      x + edgeShift,
+      y + (isTop ? layout.labelTopOffset : layout.labelBottomOffset),
+      z + (isTop ? layout.labelTopZOffset : layout.labelBottomZOffset),
+    ]
+    const connectorEnd: [number, number, number] = [
+      x,
+      labelPosition[1],
+      labelPosition[2],
+    ]
+    const tooltipDirection = index > data.length - 3 ? -layout.tooltipDirection : layout.tooltipDirection
+
+    return {
+      ...point,
+      connectorEnd,
+      isTop,
+      labelPosition,
+      position: [x, y, z],
+      tooltipPosition: [x + tooltipDirection, y + layout.tooltipYOffset, z + layout.tooltipZOffset],
+    }
+  })
 }
 
 type LifelineTooltipProps = {
-  point: LifelinePoint | null
+  point: ScenePoint | null
+  viewportPreset: ViewportPreset
   visible: boolean
   onMouseEnter?: () => void
   onMouseLeave?: () => void
 }
 
-type HoveredTooltip = {
-  point: LifelinePoint
-  x: number
-  y: number
-  visible: boolean
-}
-
 function LifelineTooltip({
   point,
+  viewportPreset,
   visible,
   onMouseEnter,
   onMouseLeave,
@@ -236,7 +282,7 @@ function LifelineTooltip({
 
   return (
     <div
-      className={`tooltip-card${visible ? ' is-visible' : ''}`}
+      className={`tooltip-card tooltip-card--${viewportPreset}${visible ? ' is-visible' : ''}`}
       onMouseEnter={onMouseEnter}
       onMouseLeave={onMouseLeave}
     >
@@ -247,14 +293,263 @@ function LifelineTooltip({
   )
 }
 
+function StageCard({ point, viewportPreset }: { point: ScenePoint; viewportPreset: ViewportPreset }) {
+  return (
+    <Html
+      center
+      distanceFactor={VIEWPORT_LAYOUTS[viewportPreset].cardDistanceFactor}
+      occlude={false}
+      position={point.labelPosition}
+      style={{ pointerEvents: 'none' }}
+    >
+      <div className={`stage-card stage-card--${viewportPreset}${point.isTop ? ' is-top' : ' is-bottom'}`}>
+        <div className="stage-card-title">
+          {point.stageLines.map((line, lineIndex) => (
+            <span key={`${point.stage}-${lineIndex}`} className="stage-card-line">
+              {line}
+            </span>
+          ))}
+        </div>
+        <div className="stage-card-note">{point.note}</div>
+      </div>
+    </Html>
+  )
+}
+
+type SceneNodeProps = {
+  onLeave: () => void
+  onHover: (point: ScenePoint) => void
+  point: ScenePoint
+  viewportPreset: ViewportPreset
+}
+
+function SceneNode({ onLeave, onHover, point, viewportPreset }: SceneNodeProps) {
+  const accentColor = useMemo(() => new THREE.Color(point.accent), [point.accent])
+
+  const handleEnter = (event: ThreeEvent<PointerEvent>) => {
+    event.stopPropagation()
+    document.body.style.cursor = 'pointer'
+    onHover(point)
+  }
+
+  const handleLeave = (event: ThreeEvent<PointerEvent>) => {
+    event.stopPropagation()
+    document.body.style.cursor = ''
+    onLeave()
+  }
+
+  return (
+    <group>
+      <DreiLine
+        color={point.accent}
+        dashScale={16}
+        dashSize={0.22}
+        dashed
+        gapSize={0.16}
+        lineWidth={1.05}
+        opacity={0.72}
+        points={[point.position, point.connectorEnd]}
+        transparent
+      />
+
+      <mesh castShadow position={point.position}>
+        <sphereGeometry args={[0.38, 32, 32]} />
+        <meshStandardMaterial
+          color={accentColor}
+          emissive={accentColor}
+          emissiveIntensity={0.38}
+          metalness={0.1}
+          roughness={0.24}
+        />
+      </mesh>
+
+      <mesh castShadow position={[point.position[0], point.position[1], point.position[2]]}>
+        <sphereGeometry args={[0.18, 24, 24]} />
+        <meshStandardMaterial color="#fff9f2" emissive="#fff4e8" emissiveIntensity={0.3} roughness={0.16} />
+      </mesh>
+
+      <mesh position={[point.position[0], point.position[1], point.position[2]]} rotation={[Math.PI / 2, 0, 0]}>
+        <torusGeometry args={[0.48, 0.04, 20, 48]} />
+        <meshStandardMaterial color="#eef7fb" emissive="#ffffff" emissiveIntensity={0.12} opacity={0.78} roughness={0.24} transparent />
+      </mesh>
+
+      <mesh
+        onPointerEnter={handleEnter}
+        onPointerLeave={handleLeave}
+        position={point.position}
+      >
+        <sphereGeometry args={[1.18, 18, 18]} />
+        <meshBasicMaterial depthWrite={false} opacity={0} transparent />
+      </mesh>
+
+      <StageCard point={point} viewportPreset={viewportPreset} />
+    </group>
+  )
+}
+
+type LifelineSceneProps = {
+  hoveredTooltip: HoveredTooltip | null
+  layout: LayoutConfig
+  onLeave: () => void
+  onTooltipMouseEnter: () => void
+  onTooltipMouseLeave: () => void
+  onHover: (point: ScenePoint) => void
+  points: ScenePoint[]
+  viewportPreset: ViewportPreset
+}
+
+function LifelineScene({
+  hoveredTooltip,
+  layout,
+  onLeave,
+  onTooltipMouseEnter,
+  onTooltipMouseLeave,
+  onHover,
+  points,
+  viewportPreset,
+}: LifelineSceneProps) {
+  const curve = useMemo(
+    () =>
+      new THREE.CatmullRomCurve3(
+        points.map((point) => new THREE.Vector3(...point.position)),
+        false,
+        'centripetal',
+      ),
+    [points],
+  )
+
+  const floorPath = useMemo(
+    () =>
+      curve.getPoints(260).map((point) => [
+        point.x,
+        -5.4,
+        point.z - 2.8,
+      ] as [number, number, number]),
+    [curve],
+  )
+
+  return (
+    <>
+      <PerspectiveCamera fov={34} makeDefault position={layout.cameraPosition} />
+      <fog attach="fog" args={['#f3eadf', 22, 56]} />
+      <ambientLight color="#fff3e6" intensity={1.35} />
+      <hemisphereLight color="#fff8f0" groundColor="#cfbea9" intensity={0.92} />
+      <directionalLight
+        castShadow
+        color="#fff0df"
+        intensity={2.4}
+        position={[10, 18, 14]}
+        shadow-mapSize-height={2048}
+        shadow-mapSize-width={2048}
+      />
+      <pointLight color="#ffb77a" intensity={28} position={[-16, 5, 11]} />
+      <pointLight color="#75d4f2" intensity={22} position={[14, 6, 12]} />
+
+      <group position={[0, -0.35, 0]}>
+        <mesh
+          position={[0, -6.15, -2.4]}
+          receiveShadow
+          rotation={[-Math.PI / 2.18, 0, 0]}
+        >
+          <planeGeometry args={[62, 24]} />
+          <meshStandardMaterial color="#f4e6d3" metalness={0.03} roughness={0.96} />
+        </mesh>
+
+        <mesh
+          position={[0, -6.45, -4.3]}
+          receiveShadow
+          rotation={[-Math.PI / 2.18, 0, 0]}
+        >
+          <planeGeometry args={[56, 18]} />
+          <meshStandardMaterial color="#d5c1aa" metalness={0.02} opacity={0.42} roughness={1} transparent />
+        </mesh>
+
+        <DreiLine
+          color="#c99a70"
+          lineWidth={0.9}
+          opacity={0.22}
+          points={floorPath}
+          transparent
+        />
+
+        <mesh castShadow>
+          <tubeGeometry args={[curve, 420, 0.085, 28, false]} />
+          <meshStandardMaterial color="#f7efe5" emissive="#fff7ee" emissiveIntensity={0.12} metalness={0.12} opacity={0.66} roughness={0.26} transparent />
+        </mesh>
+
+        <mesh castShadow>
+          <tubeGeometry args={[curve, 420, 0.06, 28, false]} />
+          <meshStandardMaterial color="#4f5d54" emissive="#b7fff6" emissiveIntensity={0.18} metalness={0.14} roughness={0.24} />
+        </mesh>
+
+        {points.map((point) => (
+          <SceneNode
+            key={point.stage}
+            onHover={onHover}
+            onLeave={onLeave}
+            point={point}
+            viewportPreset={viewportPreset}
+          />
+        ))}
+      </group>
+
+      <ContactShadows
+        blur={2.8}
+        far={14}
+        opacity={0.35}
+        position={[0, -6.85, 0]}
+        resolution={1024}
+        scale={48}
+      />
+
+      {hoveredTooltip?.point ? (
+        <Html
+          distanceFactor={layout.tooltipDistanceFactor}
+          occlude={false}
+          position={hoveredTooltip.point.tooltipPosition}
+        >
+          <div className="scene-tooltip-anchor">
+            <LifelineTooltip
+              point={hoveredTooltip.point}
+              viewportPreset={viewportPreset}
+              visible={hoveredTooltip.visible}
+              onMouseEnter={onTooltipMouseEnter}
+              onMouseLeave={onTooltipMouseLeave}
+            />
+          </div>
+        </Html>
+      ) : null}
+
+      <OrbitControls
+        enableDamping
+        enablePan={false}
+        enableZoom
+        maxAzimuthAngle={0.5}
+        maxDistance={layout.maxDistance}
+        maxPolarAngle={1.72}
+        minAzimuthAngle={-0.5}
+        minDistance={layout.minDistance}
+        minPolarAngle={1.15}
+        rotateSpeed={0.5}
+        target={layout.orbitTarget}
+        onEnd={() => {
+          document.body.style.cursor = ''
+        }}
+        onStart={() => {
+          document.body.style.cursor = 'grabbing'
+        }}
+      />
+    </>
+  )
+}
+
 function App() {
-  const chartCanvasRef = useRef<HTMLDivElement | null>(null)
   const hideTooltipTimeoutRef = useRef<number | null>(null)
+  const isTooltipHoveredRef = useRef(false)
+  const viewportPreset = useViewportPreset()
   const [hoveredTooltip, setHoveredTooltip] = useState<HoveredTooltip | null>(null)
-  const [chartCanvasSize, setChartCanvasSize] = useState({
-    width: 0,
-    height: 0,
-  })
+  const layout = VIEWPORT_LAYOUTS[viewportPreset]
+  const scenePoints = useMemo(() => buildScenePoints(timelineData, layout), [layout])
 
   useEffect(() => {
     if (!hoveredTooltip || hoveredTooltip.visible) {
@@ -272,36 +567,11 @@ function App() {
 
   useEffect(() => {
     return () => {
+      document.body.style.cursor = ''
+      isTooltipHoveredRef.current = false
       if (hideTooltipTimeoutRef.current != null) {
         window.clearTimeout(hideTooltipTimeoutRef.current)
       }
-    }
-  }, [])
-
-  useEffect(() => {
-    const chartNode = chartCanvasRef.current
-
-    if (!chartNode) {
-      return undefined
-    }
-
-    const updateCanvasSize = () => {
-      setChartCanvasSize({
-        width: chartNode.clientWidth,
-        height: chartNode.clientHeight,
-      })
-    }
-
-    updateCanvasSize()
-
-    const resizeObserver = new ResizeObserver(() => {
-      updateCanvasSize()
-    })
-
-    resizeObserver.observe(chartNode)
-
-    return () => {
-      resizeObserver.disconnect()
     }
   }, [])
 
@@ -315,60 +585,43 @@ function App() {
   const scheduleTooltipHide = () => {
     clearTooltipHideTimeout()
     hideTooltipTimeoutRef.current = window.setTimeout(() => {
+      if (isTooltipHoveredRef.current) {
+        hideTooltipTimeoutRef.current = null
+        return
+      }
+
       setHoveredTooltip((current) =>
         current ? { ...current, visible: false } : current,
       )
       hideTooltipTimeoutRef.current = null
+      document.body.style.cursor = ''
     }, TOOLTIP_HIDE_DELAY_MS)
   }
 
-  const handleTooltipLeave = () => {
-    scheduleTooltipHide()
-  }
-
-  const handleTooltipHover = (tooltip: HoveredTooltip) => {
+  const handleTooltipHover = (point: ScenePoint) => {
     clearTooltipHideTimeout()
-    setHoveredTooltip(tooltip)
+    isTooltipHoveredRef.current = false
+    setHoveredTooltip({
+      point,
+      visible: true,
+    })
   }
 
   const handleTooltipMouseEnter = () => {
+    isTooltipHoveredRef.current = true
     clearTooltipHideTimeout()
     setHoveredTooltip((current) =>
       current ? { ...current, visible: true } : current,
     )
   }
 
-  const maxTooltipLeft = Math.max(chartCanvasSize.width - TOOLTIP_WIDTH - 16, 16)
-  const chartMarginX =
-    chartCanvasSize.width >= 1280 ? 88 : chartCanvasSize.width >= 1120 ? 72 : 56
-  const axisPaddingX =
-    chartCanvasSize.width >= 1280 ? 18 : chartCanvasSize.width >= 1120 ? 14 : 10
-
-  const tooltipLeft = hoveredTooltip
-    ? Math.min(
-        Math.max(hoveredTooltip.x + TOOLTIP_GAP, 16),
-        maxTooltipLeft,
-      )
-    : 0
-
-  const tooltipTop = hoveredTooltip
-    ? (() => {
-        const topPosition = hoveredTooltip.y - TOOLTIP_HEIGHT - TOOLTIP_GAP
-        const bottomPosition = hoveredTooltip.y + TOOLTIP_GAP
-
-        if (topPosition >= 16) {
-          return topPosition
-        }
-
-        return Math.min(
-          bottomPosition,
-          Math.max(chartCanvasSize.height - TOOLTIP_HEIGHT - 16, 16),
-        )
-      })()
-    : 0
+  const handleTooltipMouseLeave = () => {
+    isTooltipHoveredRef.current = false
+    scheduleTooltipHide()
+  }
 
   return (
-    <main className="page">
+    <main className={`page page--${viewportPreset}`}>
       <div className="shell">
         <section className="chart-panel">
           <div className="section-heading">
@@ -378,96 +631,28 @@ function App() {
             </div>
             <p className="section-note">
               迷いがある時期も、技術と出会って伸びる時期も、その後の挑戦につながる流れとして表現しています。
-              長いラベルはカード化し、ホバー時には各ステージを確認できます。
+              今回は本物の3Dシーンとして再構成し、奥行きのある生命線として見せています。
             </p>
           </div>
 
           <div
-            className="chart-scroll"
+            className={`chart-scroll chart-scroll--${viewportPreset}`}
             role="img"
-            aria-label="学校生活から就職活動までの人生の節目を表したライフラインチャート"
+            aria-label="学校生活から就職活動までの人生の節目を3Dで表現したライフラインチャート"
           >
-            <div className="chart-canvas" ref={chartCanvasRef}>
-              <ResponsiveContainer width="100%" height="100%">
-                <ComposedChart
-                  data={timelineData}
-                  margin={{
-                    top: 156,
-                    right: chartMarginX,
-                    bottom: 122,
-                    left: chartMarginX,
-                  }}
-                >
-                  <defs>
-                    <linearGradient id="lifelineStroke" x1="0%" y1="0%" x2="100%" y2="0%">
-                      <stop offset="0%" stopColor="#88a860" />
-                      <stop offset="40%" stopColor="#d27c4b" />
-                      <stop offset="75%" stopColor="#338997" />
-                      <stop offset="100%" stopColor="#1f6e5d" />
-                    </linearGradient>
-                    <linearGradient id="lifelineArea" x1="0%" y1="0%" x2="0%" y2="100%">
-                      <stop offset="0%" stopColor="rgba(210, 124, 75, 0.28)" />
-                      <stop offset="100%" stopColor="rgba(210, 124, 75, 0)" />
-                    </linearGradient>
-                    <filter id="cardShadow" x="-20%" y="-20%" width="140%" height="160%">
-                      <feDropShadow
-                        dx="0"
-                        dy="18"
-                        stdDeviation="16"
-                        floodColor="#6b4b36"
-                        floodOpacity="0.14"
-                      />
-                    </filter>
-                  </defs>
-                  <CartesianGrid
-                    vertical={false}
-                    stroke="rgba(98, 76, 53, 0.16)"
-                    strokeDasharray="5 9"
-                  />
-                  <XAxis
-                    dataKey="stage"
-                    hide
-                    padding={{ left: axisPaddingX, right: axisPaddingX }}
-                  />
-                  <YAxis hide domain={[0, 10]} />
-                  <Area
-                    dataKey="energy"
-                    fill="url(#lifelineArea)"
-                    fillOpacity={1}
-                    stroke="none"
-                    type="monotone"
-                  />
-                  <Line
-                    dataKey="energy"
-                    dot={(props) => (
-                      <TimelineNode
-                        {...props}
-                        onHover={handleTooltipHover}
-                        onLeave={handleTooltipLeave}
-                      />
-                    )}
-                    stroke="url(#lifelineStroke)"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={5}
-                    type="monotone"
-                  />
-                </ComposedChart>
-              </ResponsiveContainer>
-              <div
-                className="chart-tooltip-layer"
-                style={{
-                  left: `${tooltipLeft}px`,
-                  top: `${tooltipTop}px`,
-                }}
-              >
-                <LifelineTooltip
-                  point={hoveredTooltip?.point ?? null}
-                  visible={hoveredTooltip?.visible ?? false}
-                  onMouseEnter={handleTooltipMouseEnter}
-                  onMouseLeave={handleTooltipLeave}
+            <div className={`chart-canvas chart-canvas--${viewportPreset}`}>
+              <Canvas dpr={[1, viewportPreset === 'mobile' ? 1.25 : viewportPreset === 'tablet' ? 1.5 : 1.75]} shadows>
+                <LifelineScene
+                  hoveredTooltip={hoveredTooltip}
+                  layout={layout}
+                  onHover={handleTooltipHover}
+                  onLeave={scheduleTooltipHide}
+                  onTooltipMouseEnter={handleTooltipMouseEnter}
+                  onTooltipMouseLeave={handleTooltipMouseLeave}
+                  points={scenePoints}
+                  viewportPreset={viewportPreset}
                 />
-              </div>
+              </Canvas>
             </div>
           </div>
 

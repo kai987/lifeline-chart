@@ -6,7 +6,7 @@
 .shell {
   margin: 0 auto;
   width: min(1920px, calc(100vw - 20px));
-  min-width: 1180px;
+  min-width: 0;
   max-width: 1920px;
   display: flex;
   flex-direction: column;
@@ -15,20 +15,17 @@
 .chart-panel {
   position: relative;
   overflow: visible;
-  border: none;
-  border-radius: 0;
-  background: transparent;
-  box-shadow: none;
-  backdrop-filter: none;
+  padding: 8px 0 0;
   animation: rise-in 0.8s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
-.chart-panel {
-  padding: 8px 0 0;
-}
-
-.chart-panel::before {
-  content: none;
+.section-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 32px;
+  margin-bottom: 10px;
+  padding-inline: clamp(28px, 3.8vw, 64px);
 }
 
 .section-kicker {
@@ -43,32 +40,17 @@
 .section-title {
   margin: 0;
   font-family: var(--display);
+  font-size: clamp(1.75rem, 2.6vw, 2.5rem);
+  line-height: 1.06;
   color: var(--ink);
 }
 
 .section-note {
   margin: 0;
+  max-width: 620px;
   color: var(--muted);
   font-size: clamp(1rem, 1.4vw, 1.16rem);
   line-height: 1.8;
-}
-
-.section-heading {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-end;
-  gap: 32px;
-  margin-bottom: 10px;
-  padding-inline: clamp(20px, 2.8vw, 40px);
-}
-
-.section-title {
-  font-size: clamp(1.75rem, 2.6vw, 2.5rem);
-  line-height: 1.06;
-}
-
-.section-note {
-  max-width: 560px;
 }
 
 .chart-scroll {
@@ -80,13 +62,25 @@
   width: 100%;
   max-width: none;
   margin: 0;
-  height: clamp(430px, calc(100svh - 250px), 560px);
 }
 
-.chart-tooltip-layer {
-  position: absolute;
-  z-index: 4;
-  pointer-events: none;
+.chart-canvas--desktop {
+  height: clamp(430px, calc(100svh - 248px), 560px);
+}
+
+.chart-canvas--tablet {
+  width: max(980px, 100%);
+  height: 500px;
+}
+
+.chart-canvas--mobile {
+  width: max(820px, 100%);
+  height: 430px;
+}
+
+.chart-canvas canvas {
+  display: block;
+  cursor: pointer;
 }
 
 .chart-caption {
@@ -95,40 +89,117 @@
   justify-content: space-between;
   gap: 12px 24px;
   flex-wrap: wrap;
-  padding-inline: clamp(20px, 2.8vw, 40px);
+  padding-inline: clamp(28px, 3.8vw, 64px);
   color: var(--muted);
   font-size: 0.95rem;
 }
 
-.node-anchor {
-  stroke: rgba(255, 255, 255, 0.88);
-  stroke-width: 4px;
+.stage-card {
+  border: 1px solid rgba(108, 88, 71, 0.14);
+  background:
+    linear-gradient(180deg, rgba(255, 252, 246, 0.96) 0%, rgba(250, 243, 234, 0.9) 100%);
+  box-shadow:
+    0 18px 34px rgba(110, 84, 55, 0.14),
+    inset 0 1px 0 rgba(255, 255, 255, 0.86);
+  backdrop-filter: blur(8px);
+  color: var(--ink);
+  text-align: left;
 }
 
-.node-title {
-  fill: var(--ink);
-  font-size: 14px;
-  font-weight: 700;
+.stage-card--desktop {
+  min-width: 414px;
+  padding: 40px 40px 36px;
+  border-radius: 68px;
+}
+
+.stage-card--tablet {
+  min-width: 310px;
+  padding: 28px 28px 24px;
+  border-radius: 48px;
+}
+
+.stage-card--mobile {
+  min-width: 232px;
+  padding: 20px 20px 18px;
+  border-radius: 34px;
+}
+
+.stage-card.is-top {
+  transform: rotateX(3deg) rotateY(-4deg);
+}
+
+.stage-card.is-bottom {
+  transform: rotateX(-2deg) rotateY(4deg);
+}
+
+.stage-card-title {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.stage-card-line {
+  display: block;
+  font-weight: 800;
+  line-height: 1.18;
   letter-spacing: 0.01em;
 }
 
-.node-note {
-  fill: var(--ink-soft);
-  font-size: 12px;
-  font-weight: 700;
+.stage-card--desktop .stage-card-line {
+  font-size: 1.8rem;
+}
+
+.stage-card--tablet .stage-card-line {
+  font-size: 1.34rem;
+}
+
+.stage-card--mobile .stage-card-line {
+  font-size: 1.02rem;
+}
+
+.stage-card-note {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  background: rgba(228, 229, 224, 0.92);
+  color: #5b5044;
+  font-weight: 800;
+  line-height: 1.1;
+  white-space: nowrap;
+}
+
+.stage-card--desktop .stage-card-note {
+  margin-top: 30px;
+  padding: 14px 30px;
+  font-size: 1.68rem;
+}
+
+.stage-card--tablet .stage-card-note {
+  margin-top: 20px;
+  padding: 11px 22px;
+  font-size: 1.2rem;
+}
+
+.stage-card--mobile .stage-card-note {
+  margin-top: 14px;
+  padding: 8px 16px;
+  font-size: 0.96rem;
+}
+
+.scene-tooltip-anchor {
+  width: 0;
+  height: 0;
+  pointer-events: auto;
 }
 
 .tooltip-card {
-  width: 220px;
-  min-width: 220px;
-  padding: 14px 16px;
-  border-radius: 18px;
   border: 1px solid rgba(255, 255, 255, 0.08);
   background: rgba(28, 23, 19, 0.94);
   color: #fffaf2;
   box-shadow: 0 16px 36px rgba(28, 23, 19, 0.22);
   opacity: 0;
-  transform: scale(0.96);
+  transform: translate3d(0, 0, 0) scale(0.96);
   transform-origin: top left;
   pointer-events: auto;
   transition:
@@ -136,9 +207,30 @@
     transform 180ms ease;
 }
 
+.tooltip-card--desktop {
+  width: 342px;
+  min-width: 342px;
+  padding: 21px 24px;
+  border-radius: 27px;
+}
+
+.tooltip-card--tablet {
+  width: 280px;
+  min-width: 280px;
+  padding: 17px 20px;
+  border-radius: 22px;
+}
+
+.tooltip-card--mobile {
+  width: 232px;
+  min-width: 232px;
+  padding: 14px 16px;
+  border-radius: 18px;
+}
+
 .tooltip-card.is-visible {
   opacity: 1;
-  transform: scale(1);
+  transform: translate3d(0, 0, 0) scale(1);
 }
 
 .tooltip-label,
@@ -149,32 +241,60 @@
 
 .tooltip-label {
   color: rgba(255, 240, 225, 0.78);
-  font-size: 0.72rem;
   font-weight: 700;
   letter-spacing: 0.18em;
   text-transform: uppercase;
 }
 
+.tooltip-card--desktop .tooltip-label {
+  font-size: 1.08rem;
+}
+
+.tooltip-card--tablet .tooltip-label {
+  font-size: 0.92rem;
+}
+
+.tooltip-card--mobile .tooltip-label {
+  font-size: 0.76rem;
+}
+
 .tooltip-stage {
-  margin-top: 8px;
-  font-size: 1rem;
   font-weight: 700;
+}
+
+.tooltip-card--desktop .tooltip-stage {
+  margin-top: 12px;
+  font-size: 1.5rem;
+}
+
+.tooltip-card--tablet .tooltip-stage {
+  margin-top: 10px;
+  font-size: 1.18rem;
+}
+
+.tooltip-card--mobile .tooltip-stage {
+  margin-top: 8px;
+  font-size: 0.98rem;
 }
 
 .tooltip-note {
-  margin-top: 6px;
   color: #f2b688;
-  font-size: 0.92rem;
   font-weight: 700;
 }
 
-.recharts-cartesian-grid-horizontal line {
-  opacity: 0.78;
+.tooltip-card--desktop .tooltip-note {
+  margin-top: 9px;
+  font-size: 1.38rem;
 }
 
-.recharts-line-curve {
-  opacity: 0;
-  animation: line-fade-in 0.9s 0.35s ease forwards;
+.tooltip-card--tablet .tooltip-note {
+  margin-top: 7px;
+  font-size: 1.08rem;
+}
+
+.tooltip-card--mobile .tooltip-note {
+  margin-top: 6px;
+  font-size: 0.92rem;
 }
 
 @keyframes rise-in {
@@ -189,56 +309,19 @@
   }
 }
 
-@keyframes line-fade-in {
-  from {
-    opacity: 0;
-  }
-
-  to {
-    opacity: 1;
-  }
-}
-
-@media (max-width: 960px) {
-  .page {
-    padding: 14px 14px 20px;
-  }
-
-  .shell {
-    width: calc(100vw - 28px);
-    min-width: 0;
-    max-width: none;
-  }
-
-  .chart-panel {
-    padding: 8px 0 0;
-  }
-
-  .section-heading {
-    flex-direction: column;
-    align-items: flex-start;
-    padding-inline: 12px;
-  }
-
-  .section-note {
-    max-width: none;
-  }
-
-  .chart-canvas {
-    min-width: 1080px;
-    width: 1080px;
-    height: 520px;
-  }
-
-  .chart-caption {
-    padding-inline: 12px;
-  }
-}
-
 @media (max-width: 1180px) {
   .shell {
     width: calc(100vw - 20px);
     min-width: 0;
+    max-width: none;
+  }
+
+  .section-heading {
+    gap: 22px;
+    padding-inline: 20px;
+  }
+
+  .section-note {
     max-width: none;
   }
 
@@ -258,7 +341,55 @@
     background: rgba(148, 106, 70, 0.38);
   }
 
-  .chart-scroll::-webkit-scrollbar-track {
-    background: transparent;
+  .chart-caption {
+    padding-inline: 20px;
+    font-size: 0.9rem;
+  }
+}
+
+@media (max-width: 767px) {
+  .page {
+    padding: 14px 12px 18px;
+  }
+
+  .shell {
+    width: calc(100vw - 24px);
+  }
+
+  .section-heading {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 14px;
+    margin-bottom: 8px;
+    padding-inline: 10px;
+  }
+
+  .section-kicker {
+    margin-bottom: 10px;
+    font-size: 0.72rem;
+  }
+
+  .section-title {
+    font-size: clamp(1.46rem, 6.6vw, 1.86rem);
+  }
+
+  .section-note {
+    font-size: 0.92rem;
+    line-height: 1.7;
+  }
+
+  .chart-canvas--mobile {
+    width: max(760px, 100%);
+    height: 400px;
+  }
+
+  .chart-caption {
+    gap: 6px;
+    padding-inline: 10px;
+    font-size: 0.82rem;
+  }
+
+  .chart-caption span {
+    width: 100%;
   }
 }
