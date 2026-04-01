@@ -522,16 +522,27 @@ function LifelineScene({
 
       <OrbitControls
         enableDamping
-        enablePan={false}
+        enablePan
         enableZoom
         maxAzimuthAngle={0.5}
         maxDistance={layout.maxDistance}
         maxPolarAngle={1.72}
+        mouseButtons={{
+          LEFT: THREE.MOUSE.PAN,
+          MIDDLE: THREE.MOUSE.DOLLY,
+          RIGHT: THREE.MOUSE.ROTATE,
+        }}
         minAzimuthAngle={-0.5}
         minDistance={layout.minDistance}
         minPolarAngle={1.15}
+        panSpeed={0.85}
         rotateSpeed={0.5}
+        screenSpacePanning
         target={layout.orbitTarget}
+        touches={{
+          ONE: THREE.TOUCH.PAN,
+          TWO: THREE.TOUCH.DOLLY_ROTATE,
+        }}
         onEnd={() => {
           document.body.style.cursor = ''
         }}
@@ -658,7 +669,7 @@ function App() {
 
           <div className="chart-caption">
             <span>Left to right: 学び / 技術との出会い / 日本での挑戦 / 新しいスタート</span>
-            <span>モバイルでは横スクロールで全体を確認できます。</span>
+            <span>ドラッグで左右上下に移動し、ピンチやホイールで拡大縮小できます。</span>
           </div>
         </section>
       </div>
