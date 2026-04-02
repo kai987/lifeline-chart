@@ -8,7 +8,8 @@ export type Vector3Tuple = [number, number, number]
 export type LifelinePoint = {
   stage: string
   stageLines: string[]
-  note: string
+  cardNote: string
+  tooltipNote: string
   energy: number
   accent: string
 }
@@ -38,7 +39,6 @@ export type LayoutConfig = {
   minDistance: number
   orbitTarget: Vector3Tuple
   tooltipDirection: number
-  tooltipDistanceFactor: number
   tooltipYOffset: number
   tooltipZOffset: number
   xSpacing: number
@@ -52,77 +52,88 @@ export const timelineData: LifelinePoint[] = [
   {
     stage: '小学校',
     stageLines: ['小学校'],
-    note: '普通の学生生活',
+    cardNote: '普通の学生生活',
+    tooltipNote: '普通の学生生活を送り、毎日楽しく過ごしていました',
     energy: 2.7,
     accent: '#88a860',
   },
   {
     stage: '高校',
     stageLines: ['高校'],
-    note: '将来を少し考える',
+    cardNote: '将来を少し考える',
+    tooltipNote: '将来について少しずつ考え始めた時期でした',
     energy: 4.5,
     accent: '#9cb75d',
   },
   {
     stage: '大学（化学）',
     stageLines: ['大学（化学）'],
-    note: '将来に不安',
+    cardNote: '将来に不安',
+    tooltipNote: '化学を専攻していましたが、将来について不安を感じ始めました',
     energy: 5.3,
     accent: '#8d9161',
   },
   {
     stage: '独学でプログラミング',
     stageLines: ['独学で', 'プログラミング'],
-    note: '人生の転機',
+    cardNote: '人生の転機',
+    tooltipNote: '独学でプログラミングを始め、人生の方向が大きく変わりました',
     energy: 6.8,
     accent: '#dc8455',
   },
   {
     stage: 'フロントエンドエンジニア就職',
     stageLines: ['フロントエンド', 'エンジニア就職'],
-    note: '成長',
+    cardNote: '成長',
+    tooltipNote: 'フロントエンドエンジニアとして就職し、実務開発を学び始めました',
     energy: 8.0,
     accent: '#d56c43',
   },
   {
     stage: 'SNSサービス開発',
     stageLines: ['SNSサービス', '開発'],
-    note: '大きな成長',
+    cardNote: '大きな成長',
+    tooltipNote: '多くのユーザーが使うSNSサービス開発に携わり、大きく成長しました',
     energy: 9.8,
     accent: '#c75831',
   },
   {
     stage: '日本留学',
     stageLines: ['日本留学'],
-    note: '新しい挑戦',
+    cardNote: '新しい挑戦',
+    tooltipNote: '新しい環境に挑戦するため、日本への留学を決意しました',
     energy: 9.3,
     accent: '#3c8a95',
   },
   {
     stage: '日本語学校',
     stageLines: ['日本語学校'],
-    note: '少し大変',
+    cardNote: '少し大変',
+    tooltipNote: '日本語の勉強もITの試験も難しいですが、少しずつ頑張っています',
     energy: 8.9,
     accent: '#4b95a1',
   },
   {
     stage: '京都情報大学院大学',
     stageLines: ['京都情報', '大学院大学'],
-    note: 'AIとWeb開発',
+    cardNote: 'AIとWeb開発',
+    tooltipNote: 'AIとWeb開発を学びながら、自分の技術分野を広げています',
     energy: 9.2,
     accent: '#34717c',
   },
   {
     stage: 'アルバイト・業務改善アプリ開発',
     stageLines: ['アルバイト・', '業務改善', 'アプリ開発'],
-    note: '技術が役に立つ',
+    cardNote: '技術が役に立つ',
+    tooltipNote: 'アルバイト先の業務改善アプリを開発し、技術が役に立つことを実感しました',
     energy: 10.0,
     accent: '#1095b3',
   },
   {
     stage: '就職活動',
     stageLines: ['就職活動'],
-    note: '新しいスタート',
+    cardNote: '新しいスタート',
+    tooltipNote: '日本でエンジニアとして働くため、就職活動を始めました',
     energy: 10.9,
     accent: '#1f6e5d',
   },
@@ -141,7 +152,6 @@ export const VIEWPORT_LAYOUTS: Record<ViewportPreset, LayoutConfig> = {
     minDistance: 24,
     orbitTarget: [0, 0.7, -0.6],
     tooltipDirection: 2.35,
-    tooltipDistanceFactor: 11,
     tooltipYOffset: 2.25,
     tooltipZOffset: 0.92,
     xSpacing: 4.9,
@@ -162,7 +172,6 @@ export const VIEWPORT_LAYOUTS: Record<ViewportPreset, LayoutConfig> = {
     minDistance: 22,
     orbitTarget: [0, 0.55, -0.45],
     tooltipDirection: 2,
-    tooltipDistanceFactor: 12,
     tooltipYOffset: 2,
     tooltipZOffset: 0.78,
     xSpacing: 4.35,
@@ -183,7 +192,6 @@ export const VIEWPORT_LAYOUTS: Record<ViewportPreset, LayoutConfig> = {
     minDistance: 18,
     orbitTarget: [0, 0.4, -0.25],
     tooltipDirection: 1.72,
-    tooltipDistanceFactor: 13.5,
     tooltipYOffset: 1.72,
     tooltipZOffset: 0.62,
     xSpacing: 3.95,

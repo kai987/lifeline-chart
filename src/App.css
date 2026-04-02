@@ -67,6 +67,14 @@
   margin: 0 auto;
 }
 
+.chart-tooltip-layer {
+  position: absolute;
+  inset: 0;
+  overflow: visible;
+  pointer-events: none;
+  z-index: 2147483647;
+}
+
 .chart-canvas--desktop {
   height: clamp(430px, calc(100svh - 248px), 560px);
 }
@@ -206,12 +214,9 @@
   color: #fffaf2;
   box-shadow: 0 16px 36px rgba(28, 23, 19, 0.22);
   opacity: 0;
-  transform: translate3d(0, 0, 0) scale(0.96);
-  transform-origin: top left;
+  transform: translate3d(0, 0, 0);
   pointer-events: auto;
-  transition:
-    opacity 180ms ease,
-    transform 180ms ease;
+  transition: opacity 180ms ease;
 }
 
 .tooltip-card--desktop {
@@ -237,7 +242,6 @@
 
 .tooltip-card.is-visible {
   opacity: 1;
-  transform: translate3d(0, 0, 0) scale(1);
 }
 
 .tooltip-label,
@@ -249,8 +253,7 @@
 .tooltip-label {
   color: rgba(255, 240, 225, 0.78);
   font-weight: 700;
-  letter-spacing: 0.18em;
-  text-transform: uppercase;
+  letter-spacing: 0.08em;
 }
 
 .tooltip-card--desktop .tooltip-label {

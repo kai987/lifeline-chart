@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { useMemo, useRef, type RefObject } from 'react'
 import { Canvas, type ThreeEvent } from '@react-three/fiber'
 import { ContactShadows, Html, Line as DreiLine, OrbitControls, PerspectiveCamera } from '@react-three/drei'
 import * as THREE from 'three'
@@ -44,7 +44,9 @@ type SceneNodeProps = {
   viewportPreset: ViewportPreset
 }
 
-type LifelineSceneProps = LifelineCanvasProps
+type LifelineSceneProps = LifelineCanvasProps & {
+  tooltipPortal: RefObject<HTMLDivElement | null>
+}
 
 function LifelineTooltip({
   point,
@@ -63,9 +65,9 @@ function LifelineTooltip({
       onMouseEnter={onMouseEnter}
       onMouseLeave={onMouseLeave}
     >
-      <p className="tooltip-label">Journey Point</p>
+      <p className="tooltip-label">人生の節目</p>
       <p className="tooltip-stage">{point.stage}</p>
-      <p className="tooltip-note">{point.note}</p>
+      <p className="tooltip-note">{point.tooltipNote}</p>
     </div>
   )
 }
@@ -87,7 +89,7 @@ function StageCard({ distanceFactor, point, viewportPreset }: StageCardProps) {
             </span>
           ))}
         </div>
-        <div className="stage-card-note">{point.note}</div>
+        <div className="stage-card-note">{point.cardNote}</div>
       </div>
     </Html>
   )
@@ -222,13 +224,13 @@ function SceneTooltip({
   hoveredTooltip,
   onTooltipMouseEnter,
   onTooltipMouseLeave,
-  tooltipDistanceFactor,
+  portal,
   viewportPreset,
 }: {
   hoveredTooltip: HoveredTooltip | null
   onTooltipMouseEnter: () => void
   onTooltipMouseLeave: () => void
-  tooltipDistanceFactor: number
+  portal: RefObject<HTMLDivElement | null>
   viewportPreset: ViewportPreset
 }) {
   if (!hoveredTooltip?.point) {
@@ -237,9 +239,10 @@ function SceneTooltip({
 
   return (
     <Html
-      distanceFactor={tooltipDistanceFactor}
       occlude={false}
       position={hoveredTooltip.point.tooltipPosition}
+      portal={portal as RefObject<HTMLElement>}
+      zIndexRange={[2147483647, 2147483647]}
     >
       <div className="scene-tooltip-anchor">
         <LifelineTooltip
@@ -262,6 +265,7 @@ function LifelineScene({
   onTooltipMouseEnter,
   onTooltipMouseLeave,
   points,
+  tooltipPortal,
   viewportPreset,
 }: LifelineSceneProps) {
   const curve = useMemo(
@@ -314,7 +318,7 @@ function LifelineScene({
         hoveredTooltip={hoveredTooltip}
         onTooltipMouseEnter={onTooltipMouseEnter}
         onTooltipMouseLeave={onTooltipMouseLeave}
-        tooltipDistanceFactor={layout.tooltipDistanceFactor}
+        portal={tooltipPortal}
         viewportPreset={viewportPreset}
       />
 
@@ -354,12 +358,14 @@ function LifelineScene({
 
 export function LifelineCanvas(props: LifelineCanvasProps) {
   const { viewportPreset } = props
+  const tooltipPortalRef = useRef<HTMLDivElement | null>(null)
 
   return (
     <div className={`chart-canvas chart-canvas--${viewportPreset}`}>
       <Canvas dpr={getCanvasDpr(viewportPreset)} shadows>
-        <LifelineScene {...props} />
+        <LifelineScene {...props} tooltipPortal={tooltipPortalRef} />
       </Canvas>
+      <div ref={tooltipPortalRef} className="chart-tooltip-layer" />
     </div>
   )
 }
