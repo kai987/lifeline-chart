@@ -1,6 +1,7 @@
 # lifeline-chart
 
 React + TypeScript + Recharts で作成したライフラインチャートです。
+<https://kai987.github.io/lifeline-chart/>
 
 ## Development
 
